@@ -172,10 +172,10 @@ async function loadLatestVideo() {
   if (!container) return;
 
   const feedUrl  = `https://www.youtube.com/feeds/videos.xml?channel_id=${CONFIG.youtubeChannelId}`;
-  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`;
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(feedUrl)}`;
 
   try {
-    const res = await fetch(proxyUrl);
+    const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const text = await res.text();
