@@ -3,10 +3,12 @@
    ============================================================= */
 
 const CONFIG = {
-  rssUrl:     'https://anchor.fm/s/130854cc/podcast/rss',
-  spotifyUrl: 'https://open.spotify.com/show/3G7vSeluPM2wcvdUrV3cjN',
-  spotifyEmbed: 'https://open.spotify.com/embed/show/3G7vSeluPM2wcvdUrV3cjN?utm_source=generator&theme=0',
-  episodeCount: 6,
+  rssUrl:        'https://anchor.fm/s/130854cc/podcast/rss',
+  spotifyUrl:    'https://open.spotify.com/show/3G7vSeluPM2wcvdUrV3cjN',
+  spotifyEmbed:  'https://open.spotify.com/embed/show/3G7vSeluPM2wcvdUrV3cjN?utm_source=generator&theme=0',
+  episodeCount:  6,
+  youtubeChannelId: 'UC8G83_vpTHZJVhCb7jYaIDw',
+  youtubeUrl:    'https://www.youtube.com/@MintCitySoccerShow',
 };
 
 // ── Nav: scroll-based opacity ──────────────────────────────────
@@ -164,5 +166,57 @@ function escHtml(str) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
 }
 
+// ── Latest YouTube video ────────────────────────────────────────
+async function loadLatestVideo() {
+  const container = document.getElementById('youtube-embed');
+  if (!container) return;
+
+  const feedUrl  = `https://www.youtube.com/feeds/videos.xml?channel_id=${CONFIG.youtubeChannelId}`;
+  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`;
+
+  try {
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const text = await res.text();
+    const doc  = new DOMParser().parseFromString(text, 'text/xml');
+
+    if (doc.querySelector('parsererror')) throw new Error('XML parse error');
+
+    // Extract video ID from the watch URL in the first <entry>
+    const entry   = doc.querySelector('entry');
+    if (!entry) throw new Error('No videos found');
+
+    const watchUrl = entry.querySelector('link')?.getAttribute('href') || '';
+    const videoId  = watchUrl.match(/[?&]v=([^&]+)/)?.[1];
+    if (!videoId) throw new Error('Could not parse video ID');
+
+    container.innerHTML = `
+      <iframe
+        class="yt-embed-iframe"
+        src="https://www.youtube.com/embed/${videoId}"
+        title="Latest video — Mint City Soccer Show"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+        loading="lazy">
+      </iframe>`;
+
+  } catch (err) {
+    console.warn('YouTube RSS fetch failed:', err.message);
+    container.innerHTML = `
+      <a href="${CONFIG.youtubeUrl}" target="_blank" rel="noopener" class="youtube-channel-card" aria-label="Visit our YouTube channel">
+        <div class="yt-card-bg">
+          <svg class="yt-play-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        </div>
+        <div class="yt-card-label">
+          <span class="yt-handle">@MintCitySoccerShow</span>
+          <span class="yt-cta">Watch Now →</span>
+        </div>
+      </a>`;
+  }
+}
+
 // ── Init ───────────────────────────────────────────────────────
 loadEpisodes();
+loadLatestVideo();
